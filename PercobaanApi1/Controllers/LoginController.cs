@@ -1,30 +1,36 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PercobaanApi1.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace PercobaanApi1.Controllers
 {
     public class LoginController : Controller
     {
-        private string __constr;
-        private IConfiguration __config;
+        private readonly IConfiguration _config;
 
-        public LoginController(IConfiguration configuration)
+        public LoginController(IConfiguration config)
         {
-            __config = configuration;
-            __constr = configuration.GetConnectionString("WebApiDatabase");
+            _config = config;
         }
+
         public IActionResult Index()
         {
             return View();
         }
 
         [HttpPost("API/LOGIN")]
-
-        public IEnumerable<Login> LoginUser(string namaUser, string password)
+        public IActionResult LoginUser(string namaUser, string password)
         {
-            LoginContext context = new LoginContext(this.__constr);
-            List<Login> listLogin = context.Authentifikasi(namaUser, password, __config);
-            return (listLogin).ToArray();
+            var context = new LoginContext(_config.GetConnectionString("WebApiDatabase"));
+
+            if (context.IsValidUser(namaUser, password))
+            {
+                return Ok(new { token = context.GenerateJwtToken(namaUser, _config) }); // Mengembalikan token
+            }
+
+            return Unauthorized();  // Respon Unauthorized jika login gagal
         }
     }
 }
